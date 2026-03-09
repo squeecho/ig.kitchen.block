@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Kitchen Block</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Firebase SDK (compat v9) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script>
+// ══════════════════════════════════════════════════════
+// ⚠️  여기에 Firebase 콘솔에서 복사한 설정을 붙여넣으세요
+//    Firebase Console → 프로젝트 설정 → 앱 추가(</>) → 설정 복사
+// ══════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+// ══════════════════════════════════════════════════════
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0F0F14;--surface:#1A1A22;--surface2:#22222D;--surface3:#2A2A38;
+  --border:#303040;--border2:#3A3A50;
+  --text:#E0E0F0;--text-dim:#7070A0;--text-muted:#404060;
+  --accent:#FF6135;--accent2:#FF9355;
+  --collab:#3B82F6;--collab2:#60A5FA;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-top:env(safe-area-inset-top,0px);
+}
+html,body{height:100%;overflow:hidden;touch-action:none}
+body{font-family:'IBM Plex Sans KR',-apple-system,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;font-size:13px;-webkit-font-smoothing:antialiased;padding-top:var(--safe-top)}
+
+/* ── ROLE BANNER ── */
+#role-banner{
+  height:32px;display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:11.5px;font-weight:500;flex-shrink:0;letter-spacing:.2px;
+}
+#role-banner.designer{background:#1a1f14;border-bottom:1px solid #2a3a20;color:#7bc47a}
+#role-banner.collab{background:#0f1520;border-bottom:1px solid #1e2d40;color:#60a5fa}
+#role-icon{font-size:14px}
+#role-badge{
+  padding:2px 9px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.3px;
+}
+.designer #role-badge{background:#1e3a1e;color:#7bc47a;border:1px solid #2d5a2d}
+.collab #role-badge{background:#1a2d42;color:#60a5fa;border:1px solid #2a4060}
+
+/* ── HEADER ── */
+#hdr{
+  height:50px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 12px;gap:7px;flex-shrink:0;z-index:50;
+}
+#logo{font-size:15px;font-weight:600;color:var(--accent);white-space:nowrap;letter-spacing:-.3px;flex-shrink:0}
+#logo small{color:var(--text-muted);font-weight:300;font-size:10px;margin-left:4px}
+@media(max-width:480px){#logo small{display:none}}
+.sp{flex:1}
+.hbtn{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  padding:6px 10px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:7px;color:var(--text-dim);cursor:pointer;font-size:12px;
+  font-family:inherit;white-space:nowrap;user-select:none;
+  -webkit-tap-highlight-color:transparent;min-height:36px;min-width:36px;transition:.12s;
+}
+.hbtn:active{background:var(--surface3);color:var(--text)}
+.hbtn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.hbtn.share-d{background:var(--accent);color:#fff;border-color:var(--accent)}
+.hbtn.share-d:active{background:var(--accent2)}
+.hbtn.share-c{background:var(--collab);color:#fff;border-color:var(--collab)}
+.hbtn.share-c:active{background:var(--collab2)}
+.hbtn .lbl{display:none}
+@media(min-width:560px){.hbtn .lbl{display:inline}}
+/* collab mode: dim disabled actions */
+body.collab-mode .designer-only{opacity:.35;pointer-events:none;cursor:not-allowed}
+
+/* ── WORKSPACE ── */
+#ws{display:flex;flex:1;overflow:hidden;position:relative}
+
+/* ── DESKTOP SIDEBAR ── */
+#sb{width:188px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+@media(max-width:767px){#sb{display:none}}
+#sb-inner{overflow-y:auto;flex:1}
+#sb-inner::-webkit-scrollbar{width:4px}
+#sb-inner::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.sb-head{padding:10px 12px 6px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-muted)}
+.cat-lbl{padding:6px 12px 2px;font-size:10px;color:var(--accent);font-weight:600}
+.blk-item{display:flex;align-items:center;gap:8px;padding:7px 10px;margin:1px 5px;border-radius:6px;cursor:pointer;transition:.1s;user-select:none;-webkit-tap-highlight-color:transparent}
+.blk-item:hover,.blk-item:active{background:var(--surface3)}
+.blk-swatch{width:28px;height:18px;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
+.blk-info{flex:1;min-width:0}
+.blk-name{font-size:11px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk-sz{font-size:9.5px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;margin-top:1px}
+.sb-div{height:1px;background:var(--border);margin:5px 0}
+.cust-btn{margin:7px 10px;padding:8px;background:transparent;border:1px dashed var(--border2);border-radius:6px;color:var(--text-dim);cursor:pointer;font-size:11px;font-family:inherit;text-align:center;transition:.15s;display:block;width:calc(100% - 20px)}
+.cust-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* collab: hide custom block btn in sidebar */
+body.collab-mode .cust-btn{display:none}
+
+/* ── CANVAS ── */
+#cvwrap{flex:1;position:relative;overflow:hidden;background:#0A0A10;touch-action:none}
+#cv{position:absolute;top:0;left:0;touch-action:none}
+
+/* ── MOBILE FABs ── */
+#fab-tools{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:7px;z-index:30}
+@media(min-width:768px){#fab-tools{display:none}}
+.fab{width:46px;height:46px;border-radius:13px;background:var(--surface);border:1px solid var(--border);color:var(--text-dim);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;user-select:none;box-shadow:0 3px 14px rgba(0,0,0,.5);transition:.12s}
+.fab:active{transform:scale(.91)}
+.fab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ── HUD ── */
+#hud{position:absolute;top:10px;right:10px;z-index:30;display:flex;flex-direction:column;gap:5px;align-items:flex-end;pointer-events:none}
+.hud-lbl{background:rgba(10,10,16,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+#hint-lbl{background:rgba(10,10,16,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border:1px solid var(--border);border-radius:9px;padding:7px 13px;font-size:11px;color:var(--text-dim);text-align:center;max-width:220px;line-height:1.55;pointer-events:none;transition:opacity .3s}
+
+/* collab lock overlay hint */
+#lock-hint{
+  position:absolute;bottom:60px;left:50%;transform:translateX(-50%);
+  background:rgba(30,45,66,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  border:1px solid rgba(59,130,246,.3);border-radius:10px;
+  padding:9px 16px;font-size:11.5px;color:#60a5fa;
+  text-align:center;pointer-events:none;white-space:nowrap;z-index:50;
+  opacity:0;transition:opacity .3s;
+}
+#lock-hint.show{opacity:1}
+@media(min-width:768px){#lock-hint{bottom:20px}}
+
+/* Keys desktop */
+#keys-lbl{position:absolute;bottom:12px;right:66px;background:rgba(0,0,0,.5);border:1px solid var(--border);border-radius:7px;padding:8px 11px;font-size:9.5px;color:var(--text-dim);line-height:1.85;pointer-events:none;display:none}
+@media(min-width:768px){#keys-lbl{display:block}}
+#keys-lbl b{color:var(--accent);font-family:'IBM Plex Mono',monospace}
+
+/* Zoom */
+#zbtns{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:5px;z-index:30}
+.zbtn{width:38px;height:38px;background:var(--surface);border:1px solid var(--border);border-radius:9px;color:var(--text);cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.3);-webkit-tap-highlight-color:transparent;transition:.1s}
+.zbtn:active{border-color:var(--accent);color:var(--accent)}
+
+/* ── DESKTOP PROPS ── */
+#pp{width:195px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+@media(max-width:767px){#pp{display:none}}
+#pp::-webkit-scrollbar{width:4px}
+#pp::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.pp-head{padding:10px 13px 8px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-muted);border-bottom:1px solid var(--border)}
+.pp-empty{padding:16px;color:var(--text-muted);font-size:11px;text-align:center;line-height:1.8}
+.pg{padding:10px 13px;border-bottom:1px solid var(--border)}
+.pl{font-size:9.5px;color:var(--text-dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.pi{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 8px;font-size:12px;font-family:inherit;margin-bottom:4px;transition:.15s}
+.pi:focus{outline:none;border-color:var(--accent)}
+.pi:last-child{margin-bottom:0}
+.prow{display:flex;gap:5px}.prow .pi{flex:1;min-width:0}
+.pbtn{width:100%;padding:7px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);cursor:pointer;font-size:11px;font-family:inherit;transition:.1s;margin-bottom:3px}
+.pbtn:hover{border-color:var(--accent);color:var(--accent)}
+.pbtn.del:hover{border-color:#E74C3C;color:#E74C3C}
+.pbtn:last-child{margin-bottom:0}
+.rot-disp{font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--accent);padding:2px 0 6px}
+.color-row{display:flex;align-items:center;gap:8px}
+.color-row input[type=color]{width:36px;height:28px;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:2px;background:var(--surface2)}
+/* Collab: locked field style */
+.pi.locked{opacity:.5;pointer-events:none;background:var(--surface)}
+.pi-locked-hint{font-size:9.5px;color:var(--collab);padding:2px 0 4px;opacity:.8}
+
+/* ── MOBILE LIBRARY SHEET ── */
+#lib-sheet{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:var(--surface);border-top:1px solid var(--border2);
+  border-radius:20px 20px 0 0;
+  transform:translateY(calc(100% - 58px));
+  transition:transform .32s cubic-bezier(.32,.72,0,1);
+  max-height:78vh;display:flex;flex-direction:column;
+  padding-bottom:var(--safe-bottom);will-change:transform;
+}
+#lib-sheet.open{transform:translateY(0)}
+@media(min-width:768px){#lib-sheet{display:none}}
+#lib-handle{padding:12px 16px 8px;display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+#lib-pill{width:36px;height:4px;background:var(--border2);border-radius:2px;flex-shrink:0}
+#lib-sheet-title{font-size:12.5px;font-weight:600;color:var(--text)}
+#lib-count{font-size:10px;color:var(--text-dim);flex-shrink:0;margin-left:auto}
+#cat-tabs{display:flex;gap:6px;padding:0 14px 10px;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch}
+#cat-tabs::-webkit-scrollbar{display:none}
+.cat-tab{flex-shrink:0;padding:5px 13px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);font-size:11.5px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap;transition:.15s;font-family:inherit}
+.cat-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+#lib-sheet-inner{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+#lib-sheet-inner::-webkit-scrollbar{display:none}
+#lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;padding:2px 14px 14px}
+.lib-card{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:11px;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;display:flex;flex-direction:column;gap:6px;transition:.12s}
+.lib-card:active{background:var(--surface3);transform:scale(.96);border-color:var(--accent)}
+.lib-card-swatch{height:26px;border-radius:6px;border:1px solid rgba(255,255,255,.08)}
+.lib-card-name{font-size:11.5px;font-weight:500;color:var(--text);line-height:1.3}
+.lib-card-sz{font-size:9.5px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace}
+.lib-sheet-cust{margin:0 14px 14px;padding:13px;background:transparent;border:1px dashed var(--border2);border-radius:11px;color:var(--text-dim);cursor:pointer;font-size:12px;font-family:inherit;text-align:center;transition:.15s;width:calc(100% - 28px);-webkit-tap-highlight-color:transparent}
+.lib-sheet-cust:active{border-color:var(--accent);color:var(--accent)}
+
+/* ── MOBILE PROPS SHEET ── */
+#prop-sheet{
+  position:fixed;bottom:0;left:0;right:0;z-index:110;
+  background:var(--surface);border-top:1px solid var(--border2);
+  border-radius:20px 20px 0 0;
+  transform:translateY(100%);
+  transition:transform .28s cubic-bezier(.32,.72,0,1);
+  padding-bottom:var(--safe-bottom);max-height:72vh;
+  display:flex;flex-direction:column;will-change:transform;
+}
+#prop-sheet.open{transform:translateY(0)}
+@media(min-width:768px){#prop-sheet{display:none}}
+#prop-bar{padding:13px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid var(--border)}
+#prop-bar-pill{width:36px;height:4px;background:var(--border2);border-radius:2px}
+#prop-title{font-size:13px;font-weight:600;color:var(--text)}
+#prop-close-btn{width:30px;height:30px;border-radius:50%;background:var(--surface2);border:none;color:var(--text-dim);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+#prop-scroll{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;padding:14px 16px}
+#prop-scroll::-webkit-scrollbar{display:none}
+.pf{margin-bottom:14px}.pf label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px}
+.pf input[type=text],.pf input[type=number]{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:10px 13px;font-size:15px;font-family:inherit;-webkit-appearance:none;transition:.15s}
+.pf input:focus{outline:none;border-color:var(--accent)}
+.pf input[type=color]{width:100%;height:44px;border:1px solid var(--border);border-radius:9px;cursor:pointer;padding:4px;background:var(--surface2)}
+.pf input.locked-inp{opacity:.45;pointer-events:none;background:var(--surface)}
+.pf-locked-note{font-size:10px;color:var(--collab);padding:2px 0 8px;display:flex;align-items:center;gap:5px}
+.pf-row{display:flex;gap:9px}.pf-row .pf{flex:1}
+.prop-acts{display:flex;gap:8px;margin-top:6px}
+.pa-btn{flex:1;padding:12px 6px;border:1px solid var(--border);border-radius:11px;background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;font-family:inherit;text-align:center;-webkit-tap-highlight-color:transparent;transition:.12s;line-height:1.3}
+.pa-btn:active{border-color:var(--accent);color:var(--accent)}
+.pa-btn.del:active{border-color:#E74C3C;color:#E74C3C}
+
+/* ── SHARE MODAL ── */
+#share-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;align-items:flex-end;justify-content:center}
+#share-modal.show{display:flex}
+@media(min-width:480px){#share-modal{align-items:center}}
+.share-box{background:var(--surface);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:22px 20px;width:100%;max-width:420px;padding-bottom:calc(22px + var(--safe-bottom))}
+@media(min-width:480px){.share-box{border-radius:16px;padding-bottom:22px}}
+.share-box h3{margin-bottom:6px;font-size:15px;font-weight:600}
+.share-box p{font-size:11.5px;color:var(--text-dim);margin-bottom:18px;line-height:1.6}
+.share-opt{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:.15s;display:flex;align-items:center;gap:14px}
+.share-opt:hover,.share-opt:active{border-color:currentColor}
+.share-opt.d{color:var(--accent)}.share-opt.c{color:var(--collab)}
+.share-opt-icon{font-size:22px;flex-shrink:0}
+.share-opt-info{flex:1}
+.share-opt-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.share-opt-desc{font-size:11px;color:var(--text-dim);line-height:1.5}
+.share-cancel{width:100%;padding:11px;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--text-dim);cursor:pointer;font-size:13px;font-family:inherit;margin-top:4px;-webkit-tap-highlight-color:transparent}
+
+/* ── CUSTOM MODAL ── */
+#moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-end;justify-content:center}
+#moverlay.show{display:flex}
+@media(min-width:480px){#moverlay{align-items:center}}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:22px 18px;width:100%;max-width:420px;padding-bottom:calc(22px + var(--safe-bottom))}
+@media(min-width:480px){.modal{border-radius:16px;padding-bottom:22px}}
+.modal h3{margin-bottom:18px;font-size:15px;font-weight:600}
+.modal label{font-size:10.5px;color:var(--text-dim);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.modal input[type=text],.modal input[type=number]{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 13px;font-size:15px;font-family:inherit;margin-bottom:14px;-webkit-appearance:none}
+.modal input[type=color]{width:100%;height:46px;border:1px solid var(--border);border-radius:10px;cursor:pointer;padding:4px;background:var(--surface2);margin-bottom:18px}
+.modal input:focus{outline:none;border-color:var(--accent)}
+.mrow{display:flex;gap:9px}.mrow-2{display:flex;gap:10px}.mrow-2 .mf{flex:1}
+.mbtn{flex:1;padding:12px;border:1px solid var(--border);border-radius:11px;cursor:pointer;font-size:14px;font-family:inherit;-webkit-tap-highlight-color:transparent;transition:.1s}
+.mbtn.ok{background:var(--accent);border-color:var(--accent);color:#fff}.mbtn.ok:active{background:var(--accent2)}
+.mbtn.cancel{background:transparent;color:var(--text-dim)}
+
+/* ── DXF IMPORT HINT ── */
+#dxf-hint{
+  position:absolute;bottom:60px;left:50%;transform:translateX(-50%);
+  background:rgba(20,28,20,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  border:1px solid rgba(72,210,120,.3);border-radius:10px;
+  padding:10px 18px;font-size:11.5px;color:#72d878;text-align:center;
+  pointer-events:none;white-space:nowrap;z-index:50;
+  opacity:0;transition:opacity .3s;
+}
+#dxf-hint.show{opacity:1}
+@media(min-width:768px){#dxf-hint{bottom:20px}}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--accent);color:var(--accent);padding:9px 18px;border-radius:24px;font-size:12.5px;font-weight:500;z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1}
+@media(min-width:768px){#toast{bottom:20px}}
+</style>
+</head>
+<body>
+
+<!-- ROLE BANNER -->
+<div id="role-banner" class="designer">
+  <span id="role-icon">✏️</span>
+  <span id="role-text">디자이너 모드</span>
+  <span id="role-badge">DESIGNER</span>
+</div>
+
+<!-- HEADER -->
+<div id="hdr">
+  <div id="logo">🍳 Kitchen Block<small>주방 배치 도구</small></div>
+  <div id="project-name" style="font-size:11px;color:var(--text-dim);padding:0 4px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:none"></div>
+  <div id="sync-status" style="font-size:10px;display:flex;align-items:center;gap:4px;color:var(--text-muted)">
+    <span id="sync-dot" style="width:6px;height:6px;border-radius:50%;background:var(--text-muted);display:inline-block;transition:.3s"></span>
+    <span id="sync-txt">-</span>
+  </div>
+  <div class="sp"></div>
+  <!-- designer-only tools -->
+  <button class="hbtn designer-only" id="btn-sel" onclick="setTool('select')" style="display:none">↖<span class="lbl"> 선택</span></button>
+  <button class="hbtn designer-only" id="btn-wall" onclick="setTool('wall')" style="display:none">▭<span class="lbl"> 벽체</span></button>
+  <button class="hbtn designer-only" onclick="addRoomTemplate()">⊞<span class="lbl"> 방 추가</span></button>
+  <button class="hbtn designer-only" onclick="triggerDxf()" title="CAD(DXF) 파일로 아웃라인 가져오기">📐<span class="lbl"> CAD</span></button>
+  <input type="file" id="dxf-input" accept=".dxf" style="display:none" onchange="loadDxf(this)">
+  <!-- share btn -->
+  <button class="hbtn share-d" id="share-btn" onclick="openShareModal()">↗<span class="lbl"> 공유</span></button>
+  <button class="hbtn" onclick="exportPNG()">↓<span class="lbl"> PNG</span></button>
+</div>
+
+<!-- WORKSPACE -->
+<div id="ws">
+  <aside id="sb">
+    <div class="sb-head">집기 라이브러리</div>
+    <div id="sb-inner"></div>
+    <div class="sb-div"></div>
+    <button class="cust-btn designer-only" onclick="openCustomModal()">＋ 커스텀 블록</button>
+  </aside>
+
+  <div id="cvwrap">
+    <canvas id="cv"></canvas>
+
+    <!-- Mobile FABs -->
+    <div id="fab-tools">
+      <button class="fab active designer-only" id="fab-sel" onclick="setTool('select')">↖</button>
+      <button class="fab designer-only" id="fab-wall" onclick="setTool('wall')">▭</button>
+      <button class="fab" id="fab-rotate" onclick="rotateSelected()">↻</button>
+      <button class="fab" onclick="deleteSelected()" style="color:#E74C3C">✕</button>
+    </div>
+
+    <div id="hud">
+      <div id="hint-lbl">라이브러리에서 집기를 탭하여 배치하세요</div>
+      <div class="hud-lbl" id="coord-lbl">0, 0 mm</div>
+      <div class="hud-lbl" id="scale-lbl">–</div>
+    </div>
+
+    <!-- collab lock hint -->
+    <div id="lock-hint">🔒 아웃라인은 수정할 수 없습니다</div>
+
+    <div id="keys-lbl"><b>R</b> 회전 &nbsp;<b>Del</b> 삭제<br><b>Scroll</b> 줌 &nbsp;<b>Space</b>+드래그 이동<br><b>Ctrl+D</b> 복제</div>
+
+    <div id="zbtns">
+      <button class="zbtn" onclick="doZoom(1.2)">＋</button>
+      <button class="zbtn" onclick="doZoom(1/1.2)">－</button>
+      <button class="zbtn" onclick="fitView()" style="font-size:11px">⊞</button>
+    </div>
+  </div>
+
+  <aside id="pp">
+    <div class="pp-head">속성</div>
+    <div id="pp-body"><div class="pp-empty">집기를 클릭하여<br>속성을 수정하세요</div></div>
+  </aside>
+</div>
+
+<!-- MOBILE LIBRARY SHEET -->
+<div id="lib-sheet">
+  <div id="lib-handle" onclick="toggleLibSheet()">
+    <div id="lib-pill"></div>
+    <div id="lib-sheet-title">집기 라이브러리</div>
+    <div id="lib-count">▲ 탭하여 열기</div>
+  </div>
+  <div id="cat-tabs"></div>
+  <div id="lib-sheet-inner">
+    <div id="lib-grid"></div>
+    <button class="lib-sheet-cust designer-only" onclick="openCustomModal()">＋ 커스텀 블록 만들기</button>
+  </div>
+</div>
+
+<!-- MOBILE PROPS SHEET -->
+<div id="prop-sheet">
+  <div id="prop-bar">
+    <div id="prop-bar-pill"></div>
+    <div id="prop-title">속성</div>
+    <button id="prop-close-btn" onclick="closePropSheet()">✕</button>
+  </div>
+  <div id="prop-scroll"></div>
+</div>
+
+<!-- SHARE MODAL -->
+<div id="share-modal">
+  <div class="share-box">
+    <h3>공유 링크 생성</h3>
+    <p>두 가지 권한으로 링크를 만들 수 있습니다.<br>협력사에게는 <b style="color:var(--collab)">협력사용 링크</b>를 보내세요.</p>
+    <div class="share-opt d" onclick="doShare('designer')">
+      <div class="share-opt-icon">✏️</div>
+      <div class="share-opt-info">
+        <div class="share-opt-title">디자이너용 링크</div>
+        <div class="share-opt-desc">아웃라인 수정 · 집기 배치 · 사이즈 변경<br>모든 기능 사용 가능</div>
+      </div>
+    </div>
+    <div class="share-opt c" onclick="doShare('collab')">
+      <div class="share-opt-icon">🏢</div>
+      <div class="share-opt-info">
+        <div class="share-opt-title">협력사용 링크</div>
+        <div class="share-opt-desc">집기 이동 · 추가 · 삭제만 가능<br>아웃라인 수정 · 사이즈 변경 불가</div>
+      </div>
+    </div>
+    <button class="share-cancel" onclick="closeShareModal()">취소</button>
+  </div>
+</div>
+
+<!-- CUSTOM BLOCK MODAL -->
+<div id="moverlay">
+  <div class="modal">
+    <h3>커스텀 블록 만들기</h3>
+    <label>블록 이름</label>
+    <input type="text" id="cm-name" placeholder="예: 보조작업대" value="커스텀집기">
+    <div class="mrow-2">
+      <div class="mf"><label>가로 W (mm)</label><input type="number" id="cm-w" value="600" step="10" min="10"></div>
+      <div class="mf"><label>세로 D (mm)</label><input type="number" id="cm-h" value="600" step="10" min="10"></div>
+    </div>
+    <label>색상</label>
+    <input type="color" id="cm-color" value="#5D6D7E">
+    <div class="mrow">
+      <button class="mbtn cancel" onclick="closeModal()">취소</button>
+      <button class="mbtn ok" onclick="confirmCustom()">추가</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+const SNAP=10,MAG=200,Gmin=100,Gmaj=500; // MAG: 200mm 이내면 자석처럼 붙음
+const isMobile=()=>window.innerWidth<768;
+
+// ── ROLE ──
+// mode: 'designer' | 'collab'
+let ROLE='designer';
+
+// ROLE은 init()에서 URL 파싱 후 설정됨
+function applyRole(){
+  const isC=ROLE==='collab';
+  document.body.classList.toggle('collab-mode',isC);
+  // banner
+  const b=document.getElementById('role-banner');
+  b.className=isC?'collab':'designer';
+  document.getElementById('role-icon').textContent=isC?'🏢':'✏️';
+  document.getElementById('role-text').textContent=isC?'협력사 모드 — 집기 이동/추가/삭제만 가능':'디자이너 모드';
+  document.getElementById('role-badge').textContent=isC?'COLLABORATOR':'DESIGNER';
+  // share btn color
+  const sb=document.getElementById('share-btn');
+  sb.className=isC?'hbtn share-c':'hbtn share-d';
+  // keys label
+  const kl=document.getElementById('keys-lbl');
+  if(kl) kl.innerHTML=isC
+    ?'<b style="color:var(--collab)">🔒 아웃라인·사이즈 잠금</b><br><b>Del</b> 삭제 &nbsp;<b>Scroll</b> 줌<br><b>Space</b>+드래그 이동'
+    :'<b>R</b> 회전 &nbsp;<b>Del</b> 삭제<br><b>Scroll</b> 줌 &nbsp;<b>Space</b>+드래그 이동<br><b>Ctrl+D</b> 복제';
+  // mobile: hide rotate fab for collab? No, rotation is allowed? 
+  // Per spec: collab can move/add/delete. Rotation is not mentioned explicitly.
+  // I'll allow rotation for collab as it doesn't change size.
+  // hint
+  document.getElementById('hint-lbl').textContent=isC
+    ?'집기를 탭하여 이동하거나, 라이브러리에서 추가하세요'
+    :'라이브러리에서 집기를 탭하여 배치하세요';
+}
+
+// ── LIBRARY ──
+const LIBRARY=[
+  {cat:'냉장/냉동',items:[
+    {name:'업소용냉장고',w:600,h:700,c:'#2E7D6E'},{name:'업소용냉동고',w:600,h:700,c:'#1A6B7A'},
+    {name:'오픈냉장고',w:900,h:700,c:'#2E7D6E'},{name:'냉동냉장쇼케이스',w:1200,h:700,c:'#1E6060'},
+  ]},
+  {cat:'조리기기',items:[
+    {name:'가스레인지 6구',w:900,h:600,c:'#A93226'},{name:'가스레인지 4구',w:600,h:600,c:'#A93226'},
+    {name:'전기인덕션',w:900,h:600,c:'#C0392B'},{name:'튀김기 2조',w:700,h:600,c:'#922B21'},
+    {name:'튀김기 1조',w:400,h:600,c:'#922B21'},{name:'그리들',w:600,h:600,c:'#BA4A00'},
+    {name:'오븐',w:600,h:700,c:'#B7770D'},{name:'스팀컨벡션',w:700,h:800,c:'#9A7D0A'},{name:'국솥',w:600,h:700,c:'#BA4A00'},
+  ]},
+  {cat:'세척',items:[
+    {name:'싱크대 3조',w:1800,h:600,c:'#566573'},{name:'싱크대 2조',w:1200,h:600,c:'#566573'},
+    {name:'싱크대 1조',w:600,h:600,c:'#566573'},{name:'식기세척기',w:600,h:700,c:'#424949'},
+  ]},
+  {cat:'작업대/선반',items:[
+    {name:'스탠다드작업대',w:1200,h:600,c:'#4A5568'},{name:'작업대 소',w:900,h:600,c:'#4A5568'},
+    {name:'하부선반작업대',w:1200,h:600,c:'#3D4A5C'},{name:'벽부선반',w:900,h:300,c:'#5D6D7E'},
+    {name:'이동식랙',w:600,h:400,c:'#5D6D7E'},
+  ]},
+  {cat:'기타',items:[
+    {name:'제빙기',w:400,h:500,c:'#1A5276'},{name:'음료디스펜서',w:400,h:500,c:'#154360'},
+    {name:'밥솥',w:500,h:500,c:'#6E2F0A'},{name:'식기건조기',w:600,h:400,c:'#4A5568'},
+  ]},
+];
+
+let S={blocks:[],nid:1},selId=null,tool='select';
+let view={sc:0.16,px:60,py:60};
+let drag=false,dragOff={x:0,y:0};
+let pan=false,panS={x:0,y:0},panV={px:0,py:0};
+let drawWall=false,wallA=null,wallB=null;
+let ghost=null,spaceDown=false;
+let libSheetOpen=false,activeCat=0;
+let pinchDist0=null,pinchMid0=null;
+let snapInfo={snapX:false,snapY:false}; // 마그넷 스냅 시각화 상태
+
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+const wrap=document.getElementById('cvwrap');
+
+const S2W=(sx,sy)=>({x:(sx-view.px)/view.sc,y:(sy-view.py)/view.sc});
+const snap=v=>Math.round(v/SNAP)*SNAP;
+function evPos(e){
+  const r=cv.getBoundingClientRect(),cl=e.touches?e.touches[0]:e;
+  return{x:cl.clientX-r.left,y:cl.clientY-r.top};
+}
+function getDist(e){const t=e.touches;return Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);}
+function getMid(e){const t=e.touches,r=cv.getBoundingClientRect();return{x:(t[0].clientX+t[1].clientX)/2-r.left,y:(t[0].clientY+t[1].clientY)/2-r.top};}
+function eff(b){const r=(b.rot%180)!==0;return{x:b.x,y:b.y,w:r?b.h:b.w,h:r?b.w:b.h};}
+function hit(wx,wy){
+  for(let i=S.blocks.length-1;i>=0;i--){
+    const e=eff(S.blocks[i]);
+    if(wx>=e.x&&wx<=e.x+e.w&&wy>=e.y&&wy<=e.y+e.h)return S.blocks[i];
+  }
+  return null;
+}
+function magSnap(b,eid){
+  // 현재 블록의 실효 치수 (회전 반영)
+  const e=eff(b);
+  let rx=b.x,ry=b.y,sx=false,sy=false;
+  // 스냅 강도: 가장 가까운 거리를 추적해 최적 스냅 선택
+  let bestDx=MAG+1,bestDy=MAG+1;
+
+  for(const o of S.blocks){
+    if(o.id===eid)continue;
+    const oe=eff(o);
+
+    // ─ X축 스냅 (좌우 면 맞붙이기) ─
+    const dxCases=[
+      {v:Math.abs(e.x+e.w - oe.x),    fn:()=>{rx=oe.x-e.w}},      // 내 오른면 → 상대 왼면
+      {v:Math.abs(e.x - (oe.x+oe.w)), fn:()=>{rx=oe.x+oe.w}},     // 내 왼면 ← 상대 오른면
+      {v:Math.abs(e.x - oe.x),        fn:()=>{rx=oe.x}},           // 왼면 정렬
+      {v:Math.abs(e.x+e.w - oe.x-oe.w),fn:()=>{rx=oe.x+oe.w-e.w}},// 오른면 정렬
+    ];
+    for(const c of dxCases){if(!sx&&c.v<MAG&&c.v<bestDx){bestDx=c.v;c.fn();sx=true;break;}}
+
+    // ─ Y축 스냅 (위아래 면 맞붙이기) ─
+    const dyCases=[
+      {v:Math.abs(e.y+e.h - oe.y),    fn:()=>{ry=oe.y-e.h}},
+      {v:Math.abs(e.y - (oe.y+oe.h)), fn:()=>{ry=oe.y+oe.h}},
+      {v:Math.abs(e.y - oe.y),        fn:()=>{ry=oe.y}},
+      {v:Math.abs(e.y+e.h - oe.y-oe.h),fn:()=>{ry=oe.y+oe.h-e.h}},
+    ];
+    for(const c of dyCases){if(!sy&&c.v<MAG&&c.v<bestDy){bestDy=c.v;c.fn();sy=true;break;}}
+
+    if(sx&&sy)break;
+  }
+  snapInfo={snapX:sx,snapY:sy};
+  return{x:rx,y:ry};
+}
+
+// collab can select equipment only (not walls)
+function canSelect(b){
+  if(ROLE==='designer') return true;
+  return !b.isWall; // collab: cannot select/move walls
+}
+function showLockHint(){
+  const el=document.getElementById('lock-hint');
+  el.classList.add('show');clearTimeout(el._t);
+  el._t=setTimeout(()=>el.classList.remove('show'),2000);
+}
+
+// ── RENDER ──
+function hexLum(hex){const h=hex.replace('#','');return(0.299*parseInt(h.slice(0,2),16)+0.587*parseInt(h.slice(2,4),16)+0.114*parseInt(h.slice(4,6),16))/255;}
+function darken(hex,a=30){const h=hex.replace('#','');return`rgb(${Math.max(0,parseInt(h.slice(0,2),16)-a)},${Math.max(0,parseInt(h.slice(2,4),16)-a)},${Math.max(0,parseInt(h.slice(4,6),16)-a)})`;}
+
+function drawGrid(){
+  const W=cv.width,H=cv.height,sc=view.sc,px=view.px,py=view.py;
+  const x0=Math.floor((-px/sc)/Gmin)*Gmin,y0=Math.floor((-py/sc)/Gmin)*Gmin;
+  const x1=Math.ceil((W-px)/sc/Gmin)*Gmin,y1=Math.ceil((H-py)/sc/Gmin)*Gmin;
+  ctx.lineWidth=1;ctx.strokeStyle='rgba(255,255,255,.028)';ctx.beginPath();
+  for(let x=x0;x<=x1;x+=Gmin){ctx.moveTo(x*sc+px,0);ctx.lineTo(x*sc+px,H)}
+  for(let y=y0;y<=y1;y+=Gmin){ctx.moveTo(0,y*sc+py);ctx.lineTo(W,y*sc+py)}
+  ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,.07)';ctx.beginPath();
+  for(let x=Math.ceil(x0/Gmaj)*Gmaj;x<=x1;x+=Gmaj){ctx.moveTo(x*sc+px,0);ctx.lineTo(x*sc+px,H)}
+  for(let y=Math.ceil(y0/Gmaj)*Gmaj;y<=y1;y+=Gmaj){ctx.moveTo(0,y*sc+py);ctx.lineTo(W,y*sc+py)}
+  ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.15)';ctx.font='8px IBM Plex Mono,monospace';
+  for(let x=Math.ceil(x0/Gmaj)*Gmaj;x<=x1;x+=Gmaj)if(x>=0){ctx.textAlign='left';ctx.fillText(x+'',x*sc+px+2,10)}
+  for(let y=Math.ceil(y0/Gmaj)*Gmaj;y<=y1;y+=Gmaj)if(y>=0){ctx.textAlign='right';ctx.fillText(y+'',px-3,y*sc+py-2)}
+}
+
+function drawBlock(b,sel,alpha){
+  const e=eff(b),sc=view.sc;
+  const sx=e.x*sc+view.px,sy=e.y*sc+view.py,sw=e.w*sc,sh=e.h*sc;
+  ctx.save();if(alpha!=null)ctx.globalAlpha=alpha;
+
+  // Wall: hatch pattern style
+  ctx.fillStyle=b.isWall?'#252530':b.c;ctx.fillRect(sx,sy,sw,sh);
+  if(b.isWall){
+    ctx.save();ctx.beginPath();ctx.rect(sx,sy,sw,sh);ctx.clip();
+    ctx.strokeStyle='rgba(255,255,255,.05)';ctx.lineWidth=1;
+    for(let i=-(sh+sw);i<sw+sh;i+=16){ctx.beginPath();ctx.moveTo(sx+i,sy);ctx.lineTo(sx+i+sh,sy+sh);ctx.stroke();}
+    ctx.restore();
+    // collab mode: extra lock overlay on walls
+    if(ROLE==='collab'){ctx.fillStyle='rgba(59,130,246,.04)';ctx.fillRect(sx,sy,sw,sh);}
+  }
+
+  const selColor=ROLE==='collab'?'#3B82F6':'#FF6135';
+
+  // ── 마그넷 스냅 시각화: 드래그 중 달라붙을 때 초록 글로우 + 정렬선 ──
+  if(sel && drag && (snapInfo.snapX || snapInfo.snapY)){
+    const gc='rgba(72,210,120,0.85)';
+    // 글로우 테두리
+    ctx.save();
+    ctx.shadowColor='rgba(72,210,120,0.7)';ctx.shadowBlur=14;
+    ctx.strokeStyle=gc;ctx.lineWidth=2.5;ctx.setLineDash([]);
+    ctx.strokeRect(sx+1,sy+1,sw-2,sh-2);
+    ctx.restore();
+    // 정렬 가이드라인
+    ctx.save();ctx.strokeStyle='rgba(72,210,120,0.4)';ctx.lineWidth=1;ctx.setLineDash([5,5]);
+    if(snapInfo.snapX){
+      ctx.beginPath();ctx.moveTo(sx,0);ctx.lineTo(sx,cv.height);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(sx+sw,0);ctx.lineTo(sx+sw,cv.height);ctx.stroke();
+    }
+    if(snapInfo.snapY){
+      ctx.beginPath();ctx.moveTo(0,sy);ctx.lineTo(cv.width,sy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,sy+sh);ctx.lineTo(cv.width,sy+sh);ctx.stroke();
+    }
+    ctx.restore();
+    // 스냅 아이콘 표시
+    ctx.save();ctx.fillStyle=gc;ctx.font='bold 10px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🧲',sx+sw/2,sy-12);
+    ctx.restore();
+  }
+
+  ctx.strokeStyle=sel?selColor:b.isWall?'#3A3A50':darken(b.c,20);
+  ctx.lineWidth=sel?2:1;ctx.setLineDash([]);ctx.strokeRect(sx,sy,sw,sh);
+
+  // lock icon on walls in collab mode
+  if(b.isWall&&ROLE==='collab'&&sw>20&&sh>14){
+    ctx.font=`${Math.max(9,Math.min(14,Math.min(sw,sh)*.4))}px sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.globalAlpha=.25;
+    ctx.fillStyle='#fff';ctx.fillText('🔒',sx+sw/2,sy+sh/2);ctx.globalAlpha=alpha??1;
+  }
+
+  if(sel){ctx.fillStyle=selColor;const cs=6;[[sx,sy],[sx+sw-cs,sy],[sx,sy+sh-cs],[sx+sw-cs,sy+sh-cs]].forEach(([cx2,cy2])=>ctx.fillRect(cx2,cy2,cs,cs));}
+
+  if(!b.isWall&&sw>22&&sh>14){
+    const lum=hexLum(b.c);
+    const tc=lum>.45?'rgba(0,0,0,.85)':'rgba(255,255,255,.9)';
+    const tc2=lum>.45?'rgba(0,0,0,.5)':'rgba(255,255,255,.5)';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.setLineDash([]);
+    const nfs=Math.max(7,Math.min(13,sw*.09)),sfs=Math.max(6,Math.min(10,sw*.065));
+    const cx=sx+sw/2,cy=sy+sh/2;
+    if(sh>26){ctx.font=`500 ${nfs}px 'IBM Plex Sans KR',-apple-system,sans-serif`;ctx.fillStyle=tc;ctx.fillText(b.name||'',cx,cy-sfs*.8);ctx.font=`${sfs}px 'IBM Plex Mono',monospace`;ctx.fillStyle=tc2;ctx.fillText(`${b.w}×${b.h}`,cx,cy+nfs*.75);}
+    else{ctx.font=`${nfs}px 'IBM Plex Sans KR',-apple-system,sans-serif`;ctx.fillStyle=tc;ctx.fillText(b.name||'',cx,cy);}
+  }
+  if(sel&&!b.isWall){
+    const ac=ROLE==='collab'?'rgba(59,130,246,.7)':'rgba(255,97,53,.7)';
+    const ac2=ROLE==='collab'?'#3B82F6':'#FF6135';
+    const off=14;ctx.strokeStyle=ac;ctx.fillStyle=ac2;
+    ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.font='8.5px IBM Plex Mono,monospace';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.beginPath();ctx.moveTo(sx,sy-off);ctx.lineTo(sx+sw,sy-off);ctx.stroke();
+    ctx.setLineDash([]);ctx.fillText(`${e.w}mm`,sx+sw/2,sy-off-7);
+    ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(sx+sw+off,sy);ctx.lineTo(sx+sw+off,sy+sh);ctx.stroke();
+    ctx.setLineDash([]);ctx.save();ctx.translate(sx+sw+off+8,sy+sh/2);ctx.rotate(Math.PI/2);ctx.fillText(`${e.h}mm`,0,0);ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawWallGhost(){
+  if(!drawWall||!wallA||!wallB)return;
+  const sc=view.sc,x=Math.min(wallA.x,wallB.x),y=Math.min(wallA.y,wallB.y);
+  const w=Math.abs(wallB.x-wallA.x),h=Math.abs(wallB.y-wallA.y);
+  const sx=x*sc+view.px,sy=y*sc+view.py,sw=w*sc,sh=h*sc;
+  ctx.save();ctx.globalAlpha=.55;ctx.fillStyle='#252530';ctx.strokeStyle='#FF6135';
+  ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.fillRect(sx,sy,sw,sh);ctx.strokeRect(sx,sy,sw,sh);
+  ctx.setLineDash([]);
+  if(w>0&&h>0){ctx.fillStyle='#FF6135';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.globalAlpha=1;ctx.fillText(`${w}×${h}mm`,sx+sw/2,sy+sh/2);}
+  ctx.restore();
+}
+
+function render(){
+  const W=wrap.clientWidth,H=wrap.clientHeight;
+  if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H}
+  ctx.fillStyle='#0A0A10';ctx.fillRect(0,0,W,H);
+  drawGrid();
+  S.blocks.filter(b=>b.isWall).forEach(b=>drawBlock(b,b.id===selId));
+  S.blocks.filter(b=>!b.isWall).forEach(b=>drawBlock(b,b.id===selId));
+  if(ghost)drawBlock(ghost,false,.45);
+  drawWallGhost();
+  requestAnimationFrame(render);
+}
+
+// ── TOOL ──
+function setTool(t){
+  if(ROLE==='collab'&&t==='wall'){showLockHint();return;}
+  tool=t;ghost=null;drawWall=false;wallA=null;
+  ['sel','wall'].forEach(k=>{
+    const d=document.getElementById('btn-'+k);if(d)d.classList.toggle('active',k===t);
+    const f=document.getElementById('fab-'+k);if(f)f.classList.toggle('active',k===t);
+  });
+  wrap.style.cursor=t==='wall'?'crosshair':'default';
+}
+
+// ── MOUSE ──
+cv.addEventListener('mousedown',e=>{
+  if(e.button===1){e.preventDefault();return}
+  const p=evPos(e),w=S2W(p.x,p.y);
+  if(spaceDown||e.button===2){pan=true;panS=p;panV={px:view.px,py:view.py};return}
+  if(tool==='wall'&&ROLE==='designer'){
+    if(!drawWall){drawWall=true;wallA={x:snap(w.x),y:snap(w.y)};wallB={...wallA};}
+    else{const x=Math.min(wallA.x,wallB.x),y=Math.min(wallA.y,wallB.y),bw=Math.abs(wallB.x-wallA.x),bh=Math.abs(wallB.y-wallA.y);
+      if(bw>=50||bh>=50)addBlock({x,y,w:Math.max(bw,50),h:Math.max(bh,50),isWall:true,name:'벽체',c:'#252530'});
+      drawWall=false;wallA=null;wallB=null;}
+    return;
+  }
+  const hb=hit(w.x,w.y);
+  if(hb){
+    if(!canSelect(hb)){showLockHint();return;}
+    selId=hb.id;drag=true;dragOff={x:w.x-hb.x,y:w.y-hb.y};updateProps();hideHint();
+  }else{selId=null;updateProps();}
+});
+cv.addEventListener('mousemove',e=>{
+  const p=evPos(e),w=S2W(p.x,p.y);
+  document.getElementById('coord-lbl').textContent=`${Math.round(w.x)}, ${Math.round(w.y)} mm`;
+  if(pan){view.px=panV.px+(p.x-panS.x);view.py=panV.py+(p.y-panS.y);return}
+  if(drawWall&&wallA){wallB={x:snap(w.x),y:snap(w.y)};return}
+  if(ghost){ghost.x=snap(w.x-ghost.w/2);ghost.y=snap(w.y-ghost.h/2);return}
+  if(drag&&selId){const b=S.blocks.find(b=>b.id===selId);if(!b)return;b.x=snap(w.x-dragOff.x);b.y=snap(w.y-dragOff.y);const ms=magSnap(b,b.id);b.x=ms.x;b.y=ms.y;updateProps();}
+});
+cv.addEventListener('mouseup',e=>{if(pan&&e.button!==2){pan=false;return}if(drag){drag=false;snapInfo={snapX:false,snapY:false};saveState();}});
+cv.addEventListener('mouseleave',()=>{pan=false;drag=false;});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('dblclick',e=>{
+  if(ROLE==='collab')return; // collab cannot rename
+  const p=evPos(e),w=S2W(p.x,p.y),b=hit(w.x,w.y);
+  if(b&&!b.isWall){const n=prompt('블록 이름:',b.name);if(n!==null){b.name=n;saveState();updateProps();}}
+});
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();const p=evPos(e),f=e.deltaY<0?1.12:.9;
+  const wx=(p.x-view.px)/view.sc,wy=(p.y-view.py)/view.sc;
+  view.sc=Math.max(.04,Math.min(1.5,view.sc*f));
+  view.px=p.x-wx*view.sc;view.py=p.y-wy*view.sc;updScl();
+},{passive:false});
+
+// ── TOUCH ──
+let tStartPos=null,tDidMove=false;
+cv.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(e.touches.length===2){pinchDist0=getDist(e);pinchMid0=getMid(e);drag=false;pan=false;return;}
+  if(e.touches.length===1){
+    const p=evPos(e),w=S2W(p.x,p.y);tStartPos=p;tDidMove=false;
+    if(tool==='wall'&&ROLE==='designer'){if(!drawWall){drawWall=true;wallA={x:snap(w.x),y:snap(w.y)};wallB={...wallA};}return;}
+    const hb=hit(w.x,w.y);
+    if(hb){if(!canSelect(hb)){showLockHint();pan=true;panS=p;panV={px:view.px,py:view.py};return;}selId=hb.id;drag=true;dragOff={x:w.x-hb.x,y:w.y-hb.y};hideHint();updateProps();}
+    else{pan=true;panS=p;panV={px:view.px,py:view.py};}
+  }
+},{passive:false});
+cv.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===2&&pinchDist0!==null){
+    const nd=getDist(e),nm=getMid(e),f=nd/pinchDist0;
+    const wx=(pinchMid0.x-view.px)/view.sc,wy=(pinchMid0.y-view.py)/view.sc;
+    view.sc=Math.max(.04,Math.min(1.5,view.sc*f));
+    view.px=pinchMid0.x-wx*view.sc+(nm.x-pinchMid0.x);
+    view.py=pinchMid0.y-wy*view.sc+(nm.y-pinchMid0.y);
+    pinchDist0=nd;pinchMid0=nm;updScl();return;
+  }
+  if(e.touches.length===1){
+    const p=evPos(e),w=S2W(p.x,p.y);
+    document.getElementById('coord-lbl').textContent=`${Math.round(w.x)}, ${Math.round(w.y)} mm`;
+    if(tStartPos&&(Math.abs(p.x-tStartPos.x)>5||Math.abs(p.y-tStartPos.y)>5))tDidMove=true;
+    if(drawWall&&wallA){wallB={x:snap(w.x),y:snap(w.y)};return;}
+    if(drag&&selId){pan=false;const b=S.blocks.find(b=>b.id===selId);if(!b)return;b.x=snap(w.x-dragOff.x);b.y=snap(w.y-dragOff.y);const ms=magSnap(b,b.id);b.x=ms.x;b.y=ms.y;updateProps();return;}
+    if(pan){view.px=panV.px+(p.x-panS.x);view.py=panV.py+(p.y-panS.y);}
+  }
+},{passive:false});
+cv.addEventListener('touchend',e=>{
+  e.preventDefault();pinchDist0=null;pinchMid0=null;
+  if(e.touches.length>0)return;
+  if(tool==='wall'&&wallA&&wallB&&tDidMove&&ROLE==='designer'){
+    const x=Math.min(wallA.x,wallB.x),y=Math.min(wallA.y,wallB.y);
+    const bw=Math.abs(wallB.x-wallA.x),bh=Math.abs(wallB.y-wallA.y);
+    if(bw>=50||bh>=50)addBlock({x,y,w:Math.max(bw,50),h:Math.max(bh,50),isWall:true,name:'벽체',c:'#252530'});
+    drawWall=false;wallA=null;wallB=null;pan=false;drag=false;return;
+  }
+  if(!tDidMove&&tStartPos){const p=tStartPos,w=S2W(p.x,p.y),hb=hit(w.x,w.y);if(!hb){selId=null;updateProps();closePropSheet();}}
+  if(drag){drag=false;snapInfo={snapX:false,snapY:false};saveState();if(isMobile()&&selId)openPropSheet();}
+  pan=false;drag=false;
+},{passive:false});
+
+// ── KEYBOARD ──
+window.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+  if(e.code==='Space'){spaceDown=true;wrap.style.cursor='grab';e.preventDefault();}
+  if(e.code==='Delete'||e.code==='Backspace')deleteSelected();
+  if(e.code==='KeyR')rotateSelected();
+  if(e.code==='Escape'){selId=null;ghost=null;setTool('select');updateProps();}
+  if(ROLE==='designer'&&(e.ctrlKey||e.metaKey)&&e.code==='KeyD'){e.preventDefault();duplicateSelected();}
+});
+window.addEventListener('keyup',e=>{if(e.code==='Space'){spaceDown=false;wrap.style.cursor=tool==='wall'?'crosshair':'default';}});
+
+// desktop lib drag
+cv.addEventListener('dragover',e=>{e.preventDefault();const p=evPos(e),w=S2W(p.x,p.y);if(ghost){ghost.x=snap(w.x-ghost.w/2);ghost.y=snap(w.y-ghost.h/2);}});
+cv.addEventListener('dragleave',()=>{ghost=null;});
+cv.addEventListener('drop',e=>{e.preventDefault();try{const d=JSON.parse(e.dataTransfer.getData('text/plain'));const p=evPos(e),w=S2W(p.x,p.y);addBlock({...d,x:snap(w.x-d.w/2),y:snap(w.y-d.h/2)});}catch{}ghost=null;});
+
+// ── BLOCKS ──
+function addBlock(d){
+  const b={id:S.nid++,x:d.x||0,y:d.y||0,w:d.w||600,h:d.h||600,rot:d.rot||0,name:d.name||'집기',c:d.c||'#5D6D7E',isWall:d.isWall||false};
+  S.blocks.push(b);selId=b.id;updateProps();saveState();return b;
+}
+function deleteSelected(){
+  if(!selId)return;
+  const b=S.blocks.find(b=>b.id===selId);
+  if(b&&b.isWall&&ROLE==='collab'){showLockHint();return;}
+  S.blocks=S.blocks.filter(b=>b.id!==selId);
+  selId=null;updateProps();closePropSheet();saveState();
+}
+function rotateSelected(){
+  const b=S.blocks.find(b=>b.id===selId);if(!b)return;
+  if(b.isWall&&ROLE==='collab'){showLockHint();return;}
+  b.rot=(b.rot+90)%360;updateProps();saveState();
+}
+function duplicateSelected(){
+  if(ROLE==='collab')return;
+  const b=S.blocks.find(b=>b.id===selId);if(!b)return;
+  const nb={...b,id:S.nid++,x:b.x+100,y:b.y+100};S.blocks.push(nb);selId=nb.id;updateProps();saveState();toast('복제됨');
+}
+
+// ── LIBRARY ──
+function buildLib(){
+  const c=document.getElementById('sb-inner');c.innerHTML='';
+  for(const cat of LIBRARY){
+    const cl=document.createElement('div');cl.className='cat-lbl';cl.textContent=cat.cat;c.appendChild(cl);
+    for(const item of cat.items){
+      const el=document.createElement('div');el.className='blk-item';el.draggable=true;
+      el.innerHTML=`<div class="blk-swatch" style="background:${item.c}"></div><div class="blk-info"><div class="blk-name">${item.name}</div><div class="blk-sz">${item.w}×${item.h}</div></div>`;
+      el.addEventListener('click',()=>placeItem(item));
+      el.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',JSON.stringify(item));ghost={...item,x:0,y:0,id:-1,rot:0};});
+      el.addEventListener('dragend',()=>{ghost=null;});
+      c.appendChild(el);
+    }
+  }
+  const tabs=document.getElementById('cat-tabs');tabs.innerHTML='';
+  LIBRARY.forEach((cat,i)=>{
+    const t=document.createElement('button');t.className='cat-tab'+(i===0?' active':'');
+    t.textContent=cat.cat;t.addEventListener('click',()=>{activeCat=i;document.querySelectorAll('.cat-tab').forEach((el,j)=>el.classList.toggle('active',j===i));buildMobileLib(i);});
+    tabs.appendChild(t);
+  });
+  buildMobileLib(0);
+}
+function buildMobileLib(idx){
+  const grid=document.getElementById('lib-grid');grid.innerHTML='';
+  for(const item of LIBRARY[idx].items){
+    const el=document.createElement('div');el.className='lib-card';
+    el.innerHTML=`<div class="lib-card-swatch" style="background:${item.c}"></div><div class="lib-card-name">${item.name}</div><div class="lib-card-sz">${item.w}×${item.h}mm</div>`;
+    el.addEventListener('click',()=>{placeItem(item);closeLibSheet();});
+    grid.appendChild(el);
+  }
+}
+function placeItem(item){
+  const cx=wrap.clientWidth/2,cy=wrap.clientHeight/2,wc=S2W(cx,cy);
+  addBlock({...item,x:snap(wc.x-item.w/2),y:snap(wc.y-item.h/2)});
+  toast(`${item.name} 배치됨`);hideHint();
+}
+
+// ── LIB SHEET ──
+function toggleLibSheet(){
+  libSheetOpen=!libSheetOpen;
+  document.getElementById('lib-sheet').classList.toggle('open',libSheetOpen);
+  document.getElementById('lib-count').textContent=libSheetOpen?'▼ 닫기':'▲ 열기';
+}
+function closeLibSheet(){libSheetOpen=false;document.getElementById('lib-sheet').classList.remove('open');document.getElementById('lib-count').textContent='▲ 열기';}
+let swY=null;
+const ls=document.getElementById('lib-sheet');
+ls.addEventListener('touchstart',e=>{swY=e.touches[0].clientY;},{passive:true});
+ls.addEventListener('touchend',e=>{
+  if(swY===null)return;const dy=e.changedTouches[0].clientY-swY;
+  if(dy<-40){libSheetOpen=true;ls.classList.add('open');document.getElementById('lib-count').textContent='▼ 닫기';}
+  if(dy>40)closeLibSheet();swY=null;
+},{passive:true});
+
+// ── PROPS SHEET ──
+function openPropSheet(){buildPropScroll();document.getElementById('prop-sheet').classList.add('open');}
+function closePropSheet(){document.getElementById('prop-sheet').classList.remove('open');}
+function buildPropScroll(){
+  const b=S.blocks.find(b=>b.id===selId);if(!b){closePropSheet();return;}
+  document.getElementById('prop-title').textContent=b.isWall?'벽체':b.name;
+  const ps=document.getElementById('prop-scroll');
+  const isCollab=ROLE==='collab';
+  const lockNote=isCollab?`<div class="pf-locked-note">🔒 협력사 모드 — 수정 불가</div>`:'';
+  ps.innerHTML=`
+    ${!b.isWall?`<div class="pf"><label>이름</label><input type="text" id="ms-name" value="${esc(b.name)}" ${isCollab?'class="locked-inp" readonly':''}></div>`:''}
+    <div class="pf-row">
+      <div class="pf"><label>가로 W</label><input type="number" id="ms-w" value="${b.w}" step="10" min="10" ${isCollab?'class="locked-inp" readonly':''}></div>
+      <div class="pf"><label>세로 D</label><input type="number" id="ms-h" value="${b.h}" step="10" min="10" ${isCollab?'class="locked-inp" readonly':''}></div>
+    </div>
+    ${isCollab&&!b.isWall?lockNote:''}
+    <div class="prop-acts">
+      <button class="pa-btn" onclick="rotateSelected();buildPropScroll()">↻<br>회전</button>
+      ${!isCollab?`<button class="pa-btn" onclick="duplicateSelected();closePropSheet()">⧉<br>복제</button>`:''}
+      ${!b.isWall?`<button class="pa-btn del" onclick="deleteSelected()">✕<br>삭제</button>`:''}
+    </div>`;
+  if(!isCollab){
+    const bind=(id,key,parse)=>{const el=document.getElementById(id);if(!el)return;el.addEventListener('change',e=>{b[key]=parse(e.target.value);saveState();updateProps();});};
+    if(!b.isWall){const mn=document.getElementById('ms-name');if(mn){mn.addEventListener('input',e=>{b.name=e.target.value;});mn.addEventListener('blur',()=>saveState());}}
+    bind('ms-w','w',v=>snap(Math.max(10,parseInt(v)||b.w)));
+    bind('ms-h','h',v=>snap(Math.max(10,parseInt(v)||b.h)));
+  }
+}
+
+// ── DESKTOP PROPS ──
+function updateProps(){
+  if(isMobile()){if(selId)buildPropScroll();return;}
+  const el=document.getElementById('pp-body');
+  const b=S.blocks.find(b=>b.id===selId);
+  if(!b){el.innerHTML=`<div class="pp-empty">집기를 클릭하여<br>속성을 확인하세요</div>`;return;}
+  const isCollab=ROLE==='collab';
+  const L=(v)=>isCollab?`class="pi locked" readonly value="${v}"`:`class="pi" value="${v}"`;
+  el.innerHTML=`
+    ${!b.isWall?`<div class="pg"><div class="pl">이름</div><input ${L(esc(b.name))} id="pi-name"></div>`:''}
+    <div class="pg"><div class="pl">W × D (mm)</div>
+      ${isCollab?`<div class="pi-locked-hint">🔒 사이즈 수정 불가</div>`:''}
+      <div class="prow"><input ${L(b.w)} id="pi-w" type="number" step="10" min="10"><input ${L(b.h)} id="pi-h" type="number" step="10" min="10"></div></div>
+    <div class="pg"><div class="pl">위치 (mm)</div>
+      <div class="prow"><input class="pi" id="pi-x" type="number" value="${b.x}" step="10"><input class="pi" id="pi-y" type="number" value="${b.y}" step="10"></div></div>
+    <div class="pg"><div class="pl">회전</div><div class="rot-disp">${b.rot}°</div><button class="pbtn" onclick="rotateSelected()">↻ 90° 회전</button></div>
+    ${!b.isWall&&!isCollab?`<div class="pg"><div class="pl">색상</div><div class="color-row"><input type="color" id="pi-c" value="${b.c}"></div></div>`:''}
+    <div class="pg">
+      ${!isCollab?`<button class="pbtn" onclick="duplicateSelected()">⧉ 복제</button>`:''}
+      ${!b.isWall?`<button class="pbtn del" onclick="deleteSelected()">✕ 삭제</button>`:''}
+    </div>`;
+  if(!isCollab){
+    const bind=(id,key,parse)=>{const el2=document.getElementById(id);if(!el2)return;el2.addEventListener('change',e=>{b[key]=parse(e.target.value);saveState();updateProps();});};
+    if(!b.isWall){document.getElementById('pi-name').addEventListener('input',e=>{b.name=e.target.value;});document.getElementById('pi-name').addEventListener('blur',()=>saveState());const pc=document.getElementById('pi-c');if(pc){pc.addEventListener('input',e=>{b.c=e.target.value;});bind('pi-c','c',v=>v);}}
+    bind('pi-w','w',v=>snap(Math.max(10,parseInt(v)||b.w)));bind('pi-h','h',v=>snap(Math.max(10,parseInt(v)||b.h)));
+  }
+  // position always editable (even collab can type position)
+  const bindPos=(id,key)=>{const el2=document.getElementById(id);if(!el2)return;el2.addEventListener('change',e=>{b[key]=snap(parseInt(e.target.value)||b[key]);saveState();updateProps();});};
+  bindPos('pi-x','x');bindPos('pi-y','y');
+}
+function esc(s){return String(s).replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+// ── ROOM ──
+function addRoomTemplate(){
+  if(ROLE==='collab'){showLockHint();return;}
+  const rw=3000,rh=4000,wt=200,ox=300,oy=300;
+  if(S.blocks.some(b=>b.isWall)&&!confirm('새 방을 추가하시겠습니까?'))return;
+  addBlock({x:ox,y:oy,w:rw,h:wt,isWall:true,name:'벽체',c:'#252530'});
+  addBlock({x:ox,y:oy+rh-wt,w:rw,h:wt,isWall:true,name:'벽체',c:'#252530'});
+  addBlock({x:ox,y:oy+wt,w:wt,h:rh-wt*2,isWall:true,name:'벽체',c:'#252530'});
+  addBlock({x:ox+rw-wt,y:oy+wt,w:wt,h:rh-wt*2,isWall:true,name:'벽체',c:'#252530'});
+  selId=null;updateProps();toast('3000×4000mm 방이 추가됨');
+}
+
+// ── CUSTOM MODAL ──
+function openCustomModal(){
+  if(ROLE==='collab'){showLockHint();return;}
+  closeLibSheet();document.getElementById('moverlay').classList.add('show');setTimeout(()=>document.getElementById('cm-name').focus(),80);
+}
+function closeModal(){document.getElementById('moverlay').classList.remove('show');}
+function confirmCustom(){
+  const name=document.getElementById('cm-name').value.trim()||'커스텀집기';
+  const w=snap(Math.max(10,parseInt(document.getElementById('cm-w').value)||600));
+  const h=snap(Math.max(10,parseInt(document.getElementById('cm-h').value)||600));
+  const c=document.getElementById('cm-color').value;
+  const cx=wrap.clientWidth/2,cy=wrap.clientHeight/2,wc=S2W(cx,cy);
+  addBlock({name,w,h,c,x:snap(wc.x-w/2),y:snap(wc.y-h/2)});
+  closeModal();toast(`${name} 추가됨`);hideHint();
+}
+document.getElementById('moverlay').addEventListener('click',e=>{if(e.target===document.getElementById('moverlay'))closeModal();});
+
+// ── SHARE MODAL ──
+function openShareModal(){document.getElementById('share-modal').classList.add('show');}
+function closeShareModal(){document.getElementById('share-modal').classList.remove('show');}
+document.getElementById('share-modal').addEventListener('click',e=>{if(e.target===document.getElementById('share-modal'))closeShareModal();});
+
+// ── ZOOM ──
+function doZoom(f){const cx=wrap.clientWidth/2,cy=wrap.clientHeight/2;const wx=(cx-view.px)/view.sc,wy=(cy-view.py)/view.sc;view.sc=Math.max(.04,Math.min(1.5,view.sc*f));view.px=cx-wx*view.sc;view.py=cy-wy*view.sc;updScl();}
+function updScl(){document.getElementById('scale-lbl').textContent=`1px ≈ ${(1/view.sc).toFixed(0)}mm`;}
+function fitView(){
+  if(!S.blocks.length){view.px=60;view.py=60;view.sc=.16;updScl();return;}
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  S.blocks.forEach(b=>{const e=eff(b);minX=Math.min(minX,e.x);minY=Math.min(minY,e.y);maxX=Math.max(maxX,e.x+e.w);maxY=Math.max(maxY,e.y+e.h);});
+  const W=wrap.clientWidth-80,H=wrap.clientHeight-80;
+  view.sc=Math.min(W/(maxX-minX),H/(maxY-minY),1.0);
+  view.px=40-minX*view.sc;view.py=40-minY*view.sc;updScl();
+}
+
+// ── PERSIST (Firebase Firestore) ──
+let db = null;            // Firestore 인스턴스
+let projectId = null;     // 현재 프로젝트 ID
+let unsubscribe = null;   // onSnapshot 해제 함수
+let saveTimer = null;     // 디바운스 타이머
+let isSaving = false;     // 저장 중 플래그
+let isRemoteUpdate = false; // 원격 업데이트 중 플래그 (무한루프 방지)
+
+// 짧은 프로젝트 ID 생성 (8자리 영숫자)
+function genId(){
+  return Math.random().toString(36).slice(2,6)+Math.random().toString(36).slice(2,6);
+}
+
+// 현재 URL에서 프로젝트 ID / 모드 파싱
+function parseUrl(){
+  const h=location.hash;
+  const pid=h.match(/p=([^&]+)/)?.[1]||null;
+  const mode=h.match(/mode=([^&]+)/)?.[1]||'designer';
+  return{pid,mode};
+}
+
+// URL 업데이트 (히스토리 push 없이)
+function setUrl(pid,mode){
+  const base=location.href.split('#')[0];
+  const hash=mode==='collab'?`#p=${pid}&mode=collab`:`#p=${pid}`;
+  history.replaceState(null,'',base+hash);
+}
+
+// 저장 상태 UI
+function setSyncStatus(state){
+  const dot=document.getElementById('sync-dot');
+  const txt=document.getElementById('sync-txt');
+  if(state==='saving'){dot.style.background='#F59E0B';txt.textContent='저장 중…';}
+  else if(state==='saved'){dot.style.background='#4ADE80';txt.textContent='저장됨';}
+  else if(state==='error'){dot.style.background='#F87171';txt.textContent='저장 오류';}
+  else if(state==='live'){dot.style.background='#3B82F6';txt.textContent='실시간 동기화';}
+  else{dot.style.background='var(--text-muted)';txt.textContent='-';}
+}
+
+// Firestore에 저장 (디바운스 800ms)
+function saveState(){
+  if(isRemoteUpdate) return; // 원격 변경이면 저장 안 함
+  if(!db||!projectId){
+    // Firebase 미연결 시 localStorage 폴백
+    try{localStorage.setItem('kb-fallback',JSON.stringify(S));}catch{}
+    return;
+  }
+  clearTimeout(saveTimer);
+  setSyncStatus('saving');
+  saveTimer=setTimeout(async()=>{
+    isSaving=true;
+    try{
+      await db.collection('projects').doc(projectId).set({
+        blocks: S.blocks,
+        nid: S.nid,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      },{merge:true});
+      setSyncStatus('saved');
+    }catch(e){
+      console.error('Save error:',e);
+      setSyncStatus('error');
+      toast('⚠️ 저장 실패: '+e.message);
+    }
+    isSaving=false;
+  },800);
+}
+
+// 실시간 리스닝 (협력사가 수정 → 디자이너 화면도 업데이트)
+function subscribeProject(pid){
+  if(unsubscribe) unsubscribe(); // 기존 구독 해제
+  unsubscribe=db.collection('projects').doc(pid)
+    .onSnapshot(snap=>{
+      if(!snap.exists) return;
+      const data=snap.data();
+      // 내가 드래그 중이거나 저장 중이면 원격 업데이트 무시
+      if(drag||isSaving) return;
+      isRemoteUpdate=true;
+      S.blocks=data.blocks||[];
+      S.nid=data.nid||1;
+      isRemoteUpdate=false;
+      updateProps();
+      if(S.blocks.length>0) hideHint();
+      setSyncStatus('live');
+    },err=>{
+      console.error('Snapshot error:',err);
+      setSyncStatus('error');
+    });
+}
+
+// 새 프로젝트 생성
+async function createProject(){
+  const pid=genId();
+  try{
+    await db.collection('projects').doc(pid).set({
+      blocks:[],nid:1,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    projectId=pid;
+    setUrl(pid,'designer');
+    subscribeProject(pid);
+    // 프로젝트명 표시
+    const pn=document.getElementById('project-name');
+    pn.textContent=pid;pn.style.display='block';
+    setSyncStatus('saved');
+    return true;
+  }catch(e){
+    console.error('Create project error:',e);
+    toast('⚠️ Firebase 연결 오류 — 오프라인 모드로 전환');
+    return false;
+  }
+}
+
+// 기존 프로젝트 로드
+async function loadProject(pid){
+  try{
+    const snap=await db.collection('projects').doc(pid).get();
+    if(snap.exists){
+      const data=snap.data();
+      S.blocks=data.blocks||[];
+      S.nid=data.nid||1;
+      projectId=pid;
+      subscribeProject(pid);
+      const pn=document.getElementById('project-name');
+      pn.textContent=pid;pn.style.display='block';
+      setSyncStatus('live');
+      return true;
+    }else{
+      toast('⚠️ 프로젝트를 찾을 수 없습니다 ('+pid+')');
+      return false;
+    }
+  }catch(e){
+    console.error('Load project error:',e);
+    toast('⚠️ 프로젝트 로드 실패: '+e.message);
+    return false;
+  }
+}
+
+// Firebase 초기화
+function initFirebase(){
+  try{
+    if(FIREBASE_CONFIG.apiKey==='YOUR_API_KEY'){
+      console.warn('Firebase 설정이 없습니다 — 로컬스토리지 모드로 실행');
+      return false;
+    }
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db=firebase.firestore();
+    // 오프라인 지속성 활성화 (모바일 네트워크 끊겨도 나중에 동기화)
+    db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+    return true;
+  }catch(e){
+    console.error('Firebase init error:',e);
+    return false;
+  }
+}
+
+// 공유 URL 생성 (이제 진짜 짧은 URL)
+function doShare(mode){
+  closeShareModal();
+  if(!projectId){toast('⚠️ 프로젝트를 먼저 저장하세요');return;}
+  const base=location.href.split('#')[0];
+  const url=mode==='collab'
+    ?`${base}#p=${projectId}&mode=collab`
+    :`${base}#p=${projectId}`;
+  navigator.clipboard.writeText(url)
+    .then(()=>toast(mode==='collab'?'🏢 협력사용 링크 복사됨':'✏️ 디자이너용 링크 복사됨'))
+    .catch(()=>prompt('아래 링크를 복사하세요:',url));
+}
+
+// ── TOAST ──
+let toastTimer=null;
+function toast(msg,dur=2500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),dur);}
+let hintHidden=false;
+function hideHint(){if(hintHidden)return;hintHidden=true;const h=document.getElementById('hint-lbl');h.style.opacity='0';setTimeout(()=>h.style.display='none',300);}
+
+function exportPNG(){const l=document.createElement('a');l.download='kitchen-layout.png';l.href=cv.toDataURL('image/png');l.click();toast('PNG 저장됨');}
+
+// ═══════════════════════════════════════════════════════
+// DXF IMPORT — CAD 파일에서 아웃라인 벽체 생성
+// 지원: LINE, LWPOLYLINE, POLYLINE (기본 2D 요소)
+// ═══════════════════════════════════════════════════════
+function triggerDxf(){
+  if(ROLE==='collab'){showLockHint();return;}
+  document.getElementById('dxf-input').value='';
+  document.getElementById('dxf-input').click();
+}
+
+function loadDxf(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const segs=parseDxf(e.target.result);
+      if(!segs.length){toast('⚠️ 인식 가능한 도형이 없습니다');return;}
+      importDxfSegments(segs,file.name);
+    }catch(err){toast('⚠️ DXF 파싱 오류: '+err.message);}
+  };
+  reader.readAsText(file,'utf-8');
+}
+
+/**
+ * DXF 텍스트 파싱 → 선분 배열 [{x1,y1,x2,y2}] 반환
+ * 지원 엔티티: LINE, LWPOLYLINE, POLYLINE/VERTEX
+ */
+function parseDxf(text){
+  // DXF 그룹코드 파싱: 한 줄 코드, 다음 줄 값
+  const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  const pairs=[];
+  for(let i=0;i+1<lines.length;i+=2){
+    pairs.push({code:parseInt(lines[i].trim()),val:lines[i+1].trim()});
+  }
+
+  const segs=[];
+  let inEntities=false,entity=null,verts=[];
+  let cx1=0,cy1=0,cx2=0,cy2=0; // current coords
+
+  for(let i=0;i<pairs.length;i++){
+    const {code,val}=pairs[i];
+
+    // 섹션 감지
+    if(code===2&&val==='ENTITIES'){inEntities=true;continue;}
+    if(code===2&&(val==='BLOCKS'||val==='OBJECTS'||val==='HEADER')){inEntities=false;continue;}
+    if(!inEntities)continue;
+
+    // 엔티티 타입
+    if(code===0){
+      // 이전 POLYLINE 마감
+      if(entity==='POLYLINE'||entity==='LWPOLYLINE'){
+        for(let k=0;k+1<verts.length;k++) segs.push({x1:verts[k].x,y1:verts[k].y,x2:verts[k+1].x,y2:verts[k+1].y});
+        // 닫힌 폴리라인
+        if(verts.length>2&&verts[0]){
+          const last=verts[verts.length-1];
+          if(Math.hypot(last.x-verts[0].x,last.y-verts[0].y)>1)
+            segs.push({x1:last.x,y1:last.y,x2:verts[0].x,y2:verts[0].y});
+        }
+        verts=[];
+      }
+      entity=val;
+      cx1=0;cy1=0;cx2=0;cy2=0;
+      continue;
+    }
+
+    if(entity==='LINE'){
+      if(code===10)cx1=parseFloat(val);
+      if(code===20)cy1=parseFloat(val);
+      if(code===11)cx2=parseFloat(val);
+      if(code===21){cy2=parseFloat(val);segs.push({x1:cx1,y1:cy1,x2:cx2,y2:cy2});}
+    }
+    if(entity==='LWPOLYLINE'||entity==='VERTEX'){
+      if(code===10){const v={x:parseFloat(val),y:0};verts.push(v);}
+      if(code===20&&verts.length>0)verts[verts.length-1].y=parseFloat(val);
+    }
+    if(entity==='CIRCLE'){
+      // 원은 무시 (문 개구부 등) — 필요 시 확장
+    }
+  }
+  return segs;
+}
+
+/**
+ * 선분들을 분석 → 벽체 블록으로 변환하여 캔버스에 추가
+ * 전략: 수평/수직 선분을 벽 두께(WALL_T)로 팽창하여 직사각형 블록 생성
+ */
+function importDxfSegments(segs,filename){
+  const WALL_T=150; // 기본 벽 두께 mm
+
+  // 기존 벽체 제거 여부 확인
+  const hasWalls=S.blocks.some(b=>b.isWall);
+  if(hasWalls&&!confirm(`기존 벽체(아웃라인)를 삭제하고\n${filename} 파일로 교체할까요?`))return;
+  if(hasWalls) S.blocks=S.blocks.filter(b=>!b.isWall);
+
+  // DXF 단위 → mm 스케일 계산
+  // 바운딩박스 추출
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  segs.forEach(s=>{
+    minX=Math.min(minX,s.x1,s.x2);minY=Math.min(minY,s.y1,s.y2);
+    maxX=Math.max(maxX,s.x1,s.x2);maxY=Math.max(maxY,s.y1,s.y2);
+  });
+  const rawW=maxX-minX,rawH=maxY-minY;
+  // 합리적 범위: 3000mm ~ 50000mm 사이로 스케일 자동 조정
+  // DXF 단위가 mm인지 m인지 cm인지 추정
+  let unitScale=1; // mm 기준
+  const maxDim=Math.max(rawW,rawH);
+  if(maxDim>0){
+    if(maxDim<50)unitScale=1000;       // m 단위 추정
+    else if(maxDim<500)unitScale=100;   // cm 단위 추정
+    else if(maxDim<5000)unitScale=10;   // dm? 사실상 mm로
+    else unitScale=1;                   // mm
+  }
+
+  // 변환 오프셋: 최소점을 (300,300) 기준으로
+  const offX=300-minX*unitScale;
+  const offY=300-minY*unitScale;
+  const tx=x=>Math.round((x*unitScale+offX)/SNAP)*SNAP;
+  const ty=y=>Math.round((y*unitScale+offY)/SNAP)*SNAP;
+
+  let added=0;
+  segs.forEach(s=>{
+    const x1=tx(s.x1),y1=ty(s.y1),x2=tx(s.x2),y2=ty(s.y2);
+    const dx=Math.abs(x2-x1),dy=Math.abs(y2-y1);
+    if(dx<SNAP&&dy<SNAP)return; // 너무 짧은 선 무시
+
+    // 수평 선분 → 가로 벽체
+    if(dy<dx*0.3){
+      const wx=Math.min(x1,x2),wy=Math.min(y1,y2)-WALL_T/2;
+      addBlock({x:wx,y:snap(wy),w:dx,h:WALL_T,isWall:true,name:'벽체',c:'#252530'});
+      added++;
+    }
+    // 수직 선분 → 세로 벽체
+    else if(dx<dy*0.3){
+      const wx=Math.min(x1,x2)-WALL_T/2,wy=Math.min(y1,y2);
+      addBlock({x:snap(wx),y:wy,w:WALL_T,h:dy,isWall:true,name:'벽체',c:'#252530'});
+      added++;
+    }
+    // 대각선은 스킵 (주방 도면에서 드묾)
+  });
+
+  selId=null;updateProps();fitView();
+  toast(`📐 CAD 아웃라인 불러오기 완료 — 벽체 ${added}개 생성`);
+}
+
+// ── INIT ──
+async function init(){
+  // 1. URL 파싱
+  const {pid, mode}=parseUrl();
+  ROLE=mode==='collab'?'collab':'designer';
+
+  // 2. Firebase 초기화
+  const fbOk=initFirebase();
+
+  // 3. 역할 UI 적용
+  applyRole();
+  buildLib();
+  if(!isMobile()){
+    document.getElementById('btn-sel').style.display='inline-flex';
+    document.getElementById('btn-wall').style.display='inline-flex';
+  }
+
+  // 4. 프로젝트 로드 / 생성
+  if(fbOk){
+    setSyncStatus('saving');
+    if(pid){
+      // URL에 프로젝트 ID가 있으면 로드
+      const ok=await loadProject(pid);
+      if(!ok&&ROLE==='designer'){
+        // 없는 프로젝트면 새로 만들기
+        await createProject();
+        addRoomTemplate();
+      }
+    } else if(ROLE==='designer'){
+      // 디자이너가 처음 접속 → 새 프로젝트 자동 생성
+      await createProject();
+      addRoomTemplate();
+    }
+  } else {
+    // Firebase 없음 → localStorage 폴백
+    try{
+      const fb=localStorage.getItem('kb-fallback');
+      if(fb){S=JSON.parse(fb);}
+      else if(ROLE==='designer'){addRoomTemplate();}
+    }catch{if(ROLE==='designer')addRoomTemplate();}
+    setSyncStatus('error');
+    toast('⚠️ Firebase 미설정 — 로컬 저장 모드');
+  }
+
+  // 5. 렌더 시작
+  fitView();
+  if(S.blocks.length>0) hideHint();
+  updScl();updateProps();render();
+
+  window.addEventListener('resize',()=>{
+    if(!isMobile()){document.getElementById('btn-sel').style.display='inline-flex';document.getElementById('btn-wall').style.display='inline-flex';}
+    else{document.getElementById('btn-sel').style.display='none';document.getElementById('btn-wall').style.display='none';}
+  });
+}
+init();
+</script>
+</body>
+</html>
